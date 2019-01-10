@@ -11,6 +11,7 @@ function rectangle(x1,y1,x2,y2)
 end
 
 function one_magnet(magnet_hole_diameter, magnet_outer_diameter, magnet_length,
+         cap_length,
          tube_outer_diameter,
          coil_outer_diameter, coil_length,
          magnetics_outer_diameter, magnetics_length)
@@ -36,7 +37,29 @@ function one_magnet(magnet_hole_diameter, magnet_outer_diameter, magnet_length,
   mi_selectrectangle(r0r5,0,r0r5,0,2)
   mi_setblockprop("NdFeB 40 MGOe", 1, 0, "<None>", 90, 1, 1)
   mi_clearselected()
-  mi_selectrectangle(r0,-hm,r1,hm,4)
+  if cap_length~=0 then
+    -- add steel caps to piston
+    mi_getmaterial("416 Stainless Steel")
+    mi_addnode(r0,hm+cap_length)
+    mi_addnode(r1,hm+cap_length)
+    mi_addsegment(r0,hm+cap_length,r0,hm)
+    mi_addsegment(r0,hm+cap_length,r1,hm+cap_length)
+    mi_addsegment(r1,hm+cap_length,r1,hm)
+    mi_addblocklabel(r0r5,hm+0.5*cap_length)
+    mi_selectrectangle(r0r5,hm+0.5*cap_length,r0r5,hm+0.5*cap_length,2)
+    mi_setblockprop("416 Stainless Steel", 1, 0, "<None>", 0, 1, 1)
+    mi_clearselected()
+    mi_addnode(r0,-hm-cap_length)
+    mi_addnode(r1,-hm-cap_length)
+    mi_addsegment(r0,-hm-cap_length,r0,-hm)
+    mi_addsegment(r0,-hm-cap_length,r1,-hm-cap_length)
+    mi_addsegment(r1,-hm-cap_length,r1,-hm)
+    mi_addblocklabel(r0r5,-hm-0.5*cap_length)
+    mi_selectrectangle(r0r5,-hm-0.5*cap_length,r0r5,-hm-0.5*cap_length,2)
+    mi_setblockprop("416 Stainless Steel", 1, 0, "<None>", 0, 1, 1)
+    mi_clearselected()
+  end
+  mi_selectrectangle(r0,-hm-cap_length,r1,hm+cap_length,4)
   mi_setgroup(1)
   mi_clearselected()
   --
@@ -46,19 +69,20 @@ function one_magnet(magnet_hole_diameter, magnet_outer_diameter, magnet_length,
   -- start coil
   --
   hc = 0.5*coil_length
-  rectangle(r2,hm-hc,r3,hm+hc)
-  mi_addblocklabel(r2r5,hm)
-  mi_selectrectangle(r2r5,hm,r2r5,hm,2)
+  hcap = 0.5*cap_length
+  rectangle(r2,hm+hcap-hc,r3,hm+hcap+hc)
+  mi_addblocklabel(r2r5,hm+hcap)
+  mi_selectrectangle(r2r5,hm+hcap,r2r5,hm+hcap,2)
   mi_addmaterial("COIL_P",1,1,0,10)
   mi_setblockprop("COIL_P", 1, 0, "<None>", 0, 2, 1)
   mi_clearselected()
-  rectangle(r2,-hm-hc,r3,-hm+hc)
-  mi_addblocklabel(r2r5,-hm)
-  mi_selectrectangle(r2r5,-hm,r2r5,-hm,2)
+  rectangle(r2,-hm-hcap-hc,r3,-hm-hcap+hc)
+  mi_addblocklabel(r2r5,-hm-hcap)
+  mi_selectrectangle(r2r5,-hm-hcap,r2r5,-hm-hcap,2)
   mi_addmaterial("COIL_N",1,1,0,-10)
   mi_setblockprop("COIL_N", 1, 0, "<None>", 0, 2, 1)
   mi_clearselected()
-  mi_selectrectangle(r2,-hm-hc,r3,hm+hc,4)
+  mi_selectrectangle(r2,-hm-hcap-hc,r3,hm+hcap+hc,4)
   mi_setgroup(2)
   mi_clearselected()
   --
