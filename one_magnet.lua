@@ -79,7 +79,7 @@ function one_magnet(magnet_hole_diameter, magnet_outer_diameter, magnet_length,
   rectangle(r2,-hm-hcap-hc,r3,-hm-hcap+hc)
   mi_addblocklabel(r2r5,-hm-hcap)
   mi_selectrectangle(r2r5,-hm-hcap,r2r5,-hm-hcap,2)
-  mi_addmaterial("COIL_N",1,1,0,-10)
+  mi_addmaterial("COIL_N",1,1,0,10)
   mi_setblockprop("COIL_N", 1, 0, "<None>", 0, 2, 1)
   mi_clearselected()
   mi_selectrectangle(r2,-hm-hcap-hc,r3,hm+hcap+hc,4)
@@ -104,18 +104,53 @@ function one_magnet(magnet_hole_diameter, magnet_outer_diameter, magnet_length,
   --
   -- end magnetics
   --
-  -- start boundry
   --
-  mi_addblocklabel(2*r4,0)
-  mi_selectrectangle(2*r4,0,2*r4,0,2)
+  -- start air
+  --
+  mi_addblocklabel(1.1*r4,0)
+  mi_selectrectangle(1.1*r4,0,1.1*r4,0,2)
   mi_getmaterial("Air")
   mi_setblockprop("Air", 1, 0, "<None>", 0, 0, 1)
   mi_clearselected()
-  mi_makeABC(10,3*(magnetics_length+r4),0,0,0)
-  mi_saveas("one_magnet.FEM")
+  --
+  -- stop air
+  --
+  --
+  -- start boundry
+  --
+  --  mi_makeABC(10,3*(magnetics_length+r4),0,0,0)
+  --
+  -- Kelvin transformation
+  r_in_a = sqrt((4*(hm+cap_length))^2+r1^2)
+  r_in_b = sqrt(hy^2+r4^2)*1.2
+  r_in = max(r_in_a, r_in_b)
+  r_out = 0.1*r_in
+  y_out = 1.2*r_in
+  mi_addnode(0,-r_in)
+  mi_addnode(0,r_in)
+  mi_addarc(0,-r_in,0,r_in,180,1)
+  mi_addsegment(0,-r_in,0,r_in)
+  mi_addnode(0,y_out-r_out)
+  mi_addnode(0,y_out+r_out)
+  mi_addarc(0,y_out-r_out,0,y_out+r_out,180,1)
+  mi_addsegment(0,y_out-r_out,0,y_out+r_out)
+  mi_addblocklabel(0.5*r_out,y_out)
+  mi_selectrectangle(0.5*r_out,y_out,0.5*r_out,y_out,2)
+  mi_setblockprop("Air", 1, 0, "<None>", 0, 0, 1)
+  mi_clearselected()
+  mi_addboundprop("Kelvin_Boundry",0,0,0,0,0,0,0,0,4,0,0)
+  mi_selectarcsegment(0,-r_in)
+  mi_selectarcsegment(0,y_out-r_out)
+  mi_setblockprop("Kelvin_Boundry",1,0,"<None>",0,0,1)
+  mi_clearselected()
+  mi_defineouterspace(y_out,r_out,r_in)
+  mi_selectrectangle(0,y_out-r_out,y_out+r_out,y_out+r_out)
+  mi_attachouterspace()
+  mi_clearselected()
   --
   -- end boundry
   --
+  mi_saveas("one_magnet.FEM")
 end
 
 function slide_current(increment, steps, mincurrent, maxcurrent, stepcurrent, savefilename)
