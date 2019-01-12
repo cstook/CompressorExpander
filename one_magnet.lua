@@ -79,7 +79,7 @@ function one_magnet(magnet_hole_diameter, magnet_outer_diameter, magnet_length,
   rectangle(r2,-hm-hcap-hc,r3,-hm-hcap+hc)
   mi_addblocklabel(r2r5,-hm-hcap)
   mi_selectrectangle(r2r5,-hm-hcap,r2r5,-hm-hcap,2)
-  mi_addmaterial("COIL_N",1,1,0,10)
+  mi_addmaterial("COIL_N",1,1,0,-10)
   mi_setblockprop("COIL_N", 1, 0, "<None>", 0, 2, 1)
   mi_clearselected()
   mi_selectrectangle(r2,-hm-hcap-hc,r3,hm+hcap+hc,4)
@@ -184,5 +184,42 @@ function slide_current(increment, steps, mincurrent, maxcurrent, stepcurrent, sa
       end
     end
     flush(io)
+  end
+end
+
+function sweep_parameters(savefilename)
+  io = openfile(savefilename,"w")
+  magnet_hole_diameter = 2.54
+  magnet_outer_diameter = 6.45
+  magnet_length = 6.35
+  tube_outer_diameter = (3/8)*25.4
+
+  -- write header
+  write(io,"magnet_hole_diameter,magnet_outer_diameter,magnet_length,")
+  write(io,"cap_length,tube_outer_diameter,coil_outer_diameter,coil_length,")
+  write(io,"magnetics_outer_diameter,magnetics_length,")
+  write(io,"force","\n")
+  for cap_length = 0, magnet_outer_diameter+5, 1 do
+    for  coil_outer_diameter = tube_outer_diameter+1,tube_outer_diameter+31,1 do
+      for coil_length = cap_length+0.1, cap_length+magnet_length-.1, .1 do
+        magnetics_outer_diameter = coil_outer_diameter + 10
+        magnetics_length = 3*(magnet_length+2*cap_length)
+        one_magnet(magnet_hole_diameter, magnet_outer_diameter, magnet_length,
+                  cap_length,
+                  tube_outer_diameter,
+                  coil_outer_diameter, coil_length,
+                  magnetics_outer_diameter, magnetics_length)
+        mi_analyze(1) -- set to 1 to minimize window
+        mi_loadsolution()
+        mo_groupselectblock(1)
+        force = mo_blockintegral(19) -- y part of steady-state weighted stress tensor force
+        write(io,magnet_hole_diameter,",",magnet_outer_diameter,",",magnet_length,",")
+        write(io,cap_length,",",tube_outer_diameter,",",coil_outer_diameter,",",coil_length,",")
+        write(io,magnetics_outer_diameter,",",magnetics_length,",")
+        write(io,force,"\n")
+        flush(io)
+        mi_close()
+      end
+    end
   end
 end
