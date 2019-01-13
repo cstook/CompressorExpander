@@ -223,3 +223,21 @@ function sweep_parameters(savefilename)
     end
   end
 end
+
+function measure_force(magnet_hole_diameter, magnet_outer_diameter, magnet_length,
+         cap_length,
+         tube_outer_diameter,
+         coil_outer_diameter, coil_length,
+         magnetics_outer_diameter, magnetics_length)
+  one_magnet(magnet_hole_diameter, magnet_outer_diameter, magnet_length,
+           cap_length,
+           tube_outer_diameter,
+           coil_outer_diameter, coil_length,
+           magnetics_outer_diameter, magnetics_length)
+  mi_analyze(1) -- set to 1 to minimize window
+  mi_loadsolution()
+  mo_groupselectblock(1)
+  force = mo_blockintegral(19) -- y part of steady-state weighted stress tensor force
+  mi_close()
+  return force
+end
