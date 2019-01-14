@@ -1,11 +1,6 @@
-setup_filelink()
-filelinksend("dofile(\"one_magnet.lua\")")
-x = measure_force(1,2,3,4,5,6,7,8,9)
-
-
 import FEMMfilelink
 FEMMfilelink.clearfiles()
-femm = FEMMfilelink.startfemm()
+femmprocess = FEMMfilelink.startfemm()
 FEMMfilelink.testfilelink()
 FEMMfilelink.writeifile("dofile(\"one_magnet.lua\")")
 FEMMfilelink.filelink("flput(measure_force(1,2,3,4,5,6,7,8,9))")
@@ -19,4 +14,8 @@ end
 
 measure_force(1,2,3,4,5,6,7,8,9)
 
-kill(femm)
+kill(femmprocess)
+
+# use writeifile when no output is expected
+FEMMfilelink.writeifile("newdocument(1)");
+FEMMfilelink.readofile()
