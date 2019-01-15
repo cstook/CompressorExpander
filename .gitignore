@@ -1,4 +1,5 @@
 scratch*.*
 *.ans
 Untitled.*
-*.FEM
+one_magnet.FEM
+two_magnet.FEM
