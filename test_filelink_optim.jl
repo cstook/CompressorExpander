@@ -36,13 +36,14 @@ x[5] = magnetics_length
 =#
 
 vcylinder(r,h) = π*h*r^2
-# material volume is bad, force is good
+
 
 measure_force(x) = measure_force(NSN0548_hole_diameter,NSN0548_outer_diameter,NSN0548_length,
  x[1],tube_outer_diameter,x[2],coillength(x[3],x[1]),magneticsouterdiameter(x[2],x[4]),x[5])
 one_magnet(x) = one_magnet(NSN0548_hole_diameter,NSN0548_outer_diameter,NSN0548_length,
   x[1],tube_outer_diameter,x[2],coillength(x[3],x[1]),magneticsouterdiameter(x[2],x[4]),x[5])
 
+# material volume is bad, force is good
 cost(x) = 0.1*(x[1]*NSN0548_outer_diameter^2)+  # cap cost
           1.0*(coillength(x[3],x[1])*(x[2]^2-tube_outer_diameter^2))+ # coil cost
           0.1*(x[5]*(magneticsouterdiameter(x[2],x[4])^2-x[2]^2))+ # magnetics cost
