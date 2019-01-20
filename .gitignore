@@ -2,4 +2,10 @@ scratch*.*
 *.ans
 Untitled.*
 one_magnet.FEM
+onemagnet.FEM
 two_magnet.FEM
+*.edge
+*.poly
+*.pbc
+*.node
+*.ele

@@ -1,5 +1,6 @@
 import FEMMfilelink
 using Optim
+using BenchmarkTools
 
 const NSN0548_hole_diameter = 2.54
 const NSN0548_outer_diameter = 6.45
@@ -14,7 +15,7 @@ function measure_force(magnet_hole_diameter, magnet_outer_diameter, magnet_lengt
                        tube_outer_diameter,
                        coil_outer_diameter, coil_length,
                        magnetics_outer_diameter, magnetics_length)
-    FEMMfilelink.filelink("flput(measure_force($magnet_hole_diameter,$magnet_outer_diameter,$magnet_length,$cap_length,$tube_outer_diameter,$coil_outer_diameter,$coil_length,$magnetics_outer_diameter,$magnetics_length))",timeout_s=2)
+    FEMMfilelink.filelink("flput(measure_force($magnet_hole_diameter,$magnet_outer_diameter,$magnet_length,$cap_length,$tube_outer_diameter,$coil_outer_diameter,$coil_length,$magnetics_outer_diameter,$magnetics_length))",timeout_s=5)
 end
 
 function one_magnet(magnet_hole_diameter, magnet_outer_diameter, magnet_length,
@@ -65,7 +66,7 @@ FEMMfilelink.writeifile("dofile(\"one_magnet.lua\")")
 
 inner_optimizer = NelderMead()
 options = Optim.Options(x_tol=0.01, f_tol=0.001, outer_iterations = 4, iterations=4, store_trace=true,show_trace=true,show_every=1,time_limit=500,f_calls_limit=100)
-result = optimize(cost,lower,upper,x0,Fminbox(inner_optimizer),options)
+result = @btime optimize(cost,lower,upper,x0,Fminbox(inner_optimizer),options)
 x = Optim.minimizer(result)
 force = measure_force(x)
 one_magnet(x)

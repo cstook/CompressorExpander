@@ -1,5 +1,6 @@
 using PyCall
 @pyimport femm
+using Optim
 const air = ("Air", 1, 0, "<None>", 0, 0, 1)
 
 function blockprop(x,y,property,outerspace::Bool=false)
@@ -153,9 +154,59 @@ function setcurrent(i)
   femm.mi_modifymaterial("COIL_N",4,-i)
 end
 
+
+
 function testonemagnetoptim()
+  function force(x,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename)
+    onemagnet(magnet, x[1], propertycap,
+              pressure_tube_outer_diameter, x[3], x[2], 10,
+              x[4], x[5], propertytube)
+    femm.mi_saveas(filename)
+    f = measuregroup1force()
+    femm.mi_close()
+    f
+  end
+  volumecap(x,magnet) = x[1]*(magnet.router^2-magnet.rhole^2) # ignore factor of π
+  volumecoil(x,magnet,pressure_tube_outer_diameter) = (2*magnet.halflength+x[1]-x[3])*(x[2]^2 - pressure_tube_outer_diameter^2) # ignore factor of π
+  volumetube(x) = x[5]*((x[2]+x[4])^2 - x[2]^2) # ignore factor of π
+  cost(x,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename) =
+    0.1*volumecap(x,magnet) +
+    1.0*volumecoil(x, magnet, pressure_tube_outer_diameter) +
+    0.1*volumetube(x) -
+    5000.0*force(x,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename)
 
+  femm.openfemm(1)
+  propertycap = ("416 Stainless Steel", 1, 0, "<None>", 0, 1, 1)
+  propertymagnet = ("NdFeB 40 MGOe", 1, 0, "<None>", 90, 1, 1)
+  propertytube = ("416 Stainless Steel", 1, 0, "<None>", 0, 3, 1)
+  NSN0548 = Magnet(0.5*2.54, 0.5*6.45, 0.5*6.35, propertymagnet)
+  magnet = NSN0548
+  pressure_tube_outer_diameter = (3/8)*25.4
+  #=
+  x[1] = cap_length
+  x[2] = coil_outer_diameter
+  x[3] = coil_gap
+  x[4] = magnetics_wallthichness
+  x[5] = magnetics_length
+  =#
 
+  #
+  # x = [6.278917000333998,13.806208919890006,2.3251921592932017,10.8690263304688,43.28815743888883]
+  filename = tempname()
+  lower = [0.1, pressure_tube_outer_diameter+0.1,0.1,0.1,2*magnet.halflength]
+  upper = [2*magnet.halflength, pressure_tube_outer_diameter+20,2*magnet.halflength,20.0,100.0]
+  x0 = ((x,y)->(x+y)/2).(lower,upper)
+  volumecap(x0,magnet)
+  volumecoil(x0,magnet,pressure_tube_outer_diameter)
+  volumetube(x0)
+  force(x0,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename)
+
+  inner_optimizer = NelderMead()
+  options = Optim.Options(x_tol=0.01, f_tol=0.001, outer_iterations = 4, iterations=4, store_trace=true,show_trace=true,show_every=1,time_limit=500,f_calls_limit=100)
+  result = optimize(
+    x->cost(x,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename),
+    lower,upper,x0,Fminbox(inner_optimizer),options
+    )
 end
 
 function testonemagnet()
@@ -165,7 +216,6 @@ function testonemagnet()
   femm.openfemm(1)
   femm.newdocument(0)
   femm.mi_probdef(0,"millimeters","axi",1e-10)
-
   NSN0548 = Magnet(0.5*2.54, 0.5*6.45, 0.5*6.35, propertymagnet)
   onemagnet(NSN0548,5,propertycap,2,2,5,10,5,40,propertytube)
   femm.mi_saveas("onemagnet.FEM")
