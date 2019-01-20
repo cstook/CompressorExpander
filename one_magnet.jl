@@ -159,9 +159,9 @@ end
 function testonemagnetoptim()
   function force(x,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename)
     onemagnet(magnet, x[1], propertycap,
-              pressure_tube_outer_diameter, x[3], x[2], 10,
+              pressure_tube_outer_diameter-magnet.router, x[3], x[2], 10,
               x[4], x[5], propertytube)
-    femm.mi_saveas(filename)
+    femm.mi_saveas("onemagnet.FEM")
     f = measuregroup1force()
     femm.mi_close()
     f
@@ -184,7 +184,7 @@ function testonemagnetoptim()
   pressure_tube_outer_diameter = (3/8)*25.4
   #=
   x[1] = cap_length
-  x[2] = coil_outer_diameter
+  x[2] = Δrcoil
   x[3] = coil_gap
   x[4] = magnetics_wallthichness
   x[5] = magnetics_length
@@ -207,6 +207,19 @@ function testonemagnetoptim()
     x->cost(x,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename),
     lower,upper,x0,Fminbox(inner_optimizer),options
     )
+  femm.closefemm()
+  result
+end
+
+function viewresult(x,
+                    magnet= Magnet(0.5*2.54, 0.5*6.45, 0.5*6.35, ("NdFeB 40 MGOe", 1, 0, "<None>", 90, 1, 1)),
+                    pressure_tube_outer_diameter= (3/8)*25.4,
+                    propertycap= ("416 Stainless Steel", 1, 0, "<None>", 0, 1, 1),
+                    propertytube= ("416 Stainless Steel", 1, 0, "<None>", 0, 3, 1))
+  femm.openfemm(1)
+  onemagnet(magnet, x[1], propertycap,
+            pressure_tube_outer_diameter-magnet.router, x[3], x[2], 10,
+            x[4], x[5], propertytube)
 end
 
 function testonemagnet()
@@ -214,8 +227,6 @@ function testonemagnet()
   propertymagnet = ("NdFeB 40 MGOe", 1, 0, "<None>", 90, 1, 1)
   propertytube = ("416 Stainless Steel", 1, 0, "<None>", 0, 3, 1)
   femm.openfemm(1)
-  femm.newdocument(0)
-  femm.mi_probdef(0,"millimeters","axi",1e-10)
   NSN0548 = Magnet(0.5*2.54, 0.5*6.45, 0.5*6.35, propertymagnet)
   onemagnet(NSN0548,5,propertycap,2,2,5,10,5,40,propertytube)
   femm.mi_saveas("onemagnet.FEM")
@@ -225,6 +236,7 @@ function testonemagnet()
   f5 = measuregroup1force()
   setcurrent(0)
   f0 = measuregroup1force()
+  femm.closefemm()
   (f10,f5,f0)
 end
 
