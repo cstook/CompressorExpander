@@ -139,6 +139,24 @@ function onemagnet(magnet::Magnet,
   kelvinboundry(max(rk1,rk2,rk3)*1.2)
 end
 
+function measuregroup1force()
+  femm.mi_analyze(1)
+  femm.mi_loadsolution()
+  femm.mo_groupselectblock(1)
+  force = femm.mo_blockintegral(19) # y part of steady-state weighted stress tensor force
+  femm.mo_close()
+  return force
+end
+
+function setcurrent(i)
+  femm.mi_modifymaterial("COIL_P",4,i)
+  femm.mi_modifymaterial("COIL_N",4,-i)
+end
+
+function testonemagnetoptim()
+
+
+end
 
 function testonemagnet()
   propertycap = ("416 Stainless Steel", 1, 0, "<None>", 0, 1, 1)
@@ -151,27 +169,13 @@ function testonemagnet()
   NSN0548 = Magnet(0.5*2.54, 0.5*6.45, 0.5*6.35, propertymagnet)
   onemagnet(NSN0548,5,propertycap,2,2,5,10,5,40,propertytube)
   femm.mi_saveas("onemagnet.FEM")
+  setcurrent(10)
+  f10 = measuregroup1force()
+  setcurrent(5)
+  f5 = measuregroup1force()
+  setcurrent(0)
+  f0 = measuregroup1force()
+  (f10,f5,f0)
 end
 
-testonemagnet()
-
-
-
-femm.mi_close()
-
-femm.mi_getmaterial("Air")
-rectangle(1,1,2,2,air)
-
-
-kelvinboundry(0,10,air)
-y = 0
-r = 10
-outerproperty=air
-
-magnet = Magnet(1.0,2.0,3.0,propertymagnet)
-piston(magnet,3.0,propertycap)
-coil(4, 3, 2, 2, 10)
-tube(10,1,20,propertytube)
-
-femm.mi_close()
-onemagnet(magnet,5,propertycap,2,2,5,10,5,15,propertytube)
+# testonemagnet()

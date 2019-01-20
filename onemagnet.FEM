@@ -108,7 +108,7 @@
     <Mu_y> = 1
     <H_c> = 0
     <H_cAngle> = 0
-    <J_re> = 10
+    <J_re> = 0
     <J_im> = 0
     <Sigma> = 0
     <d_lam> = 0
@@ -127,7 +127,7 @@
     <Mu_y> = 1
     <H_c> = 0
     <H_cAngle> = 0
-    <J_re> = -10
+    <J_re> = 0
     <J_im> = 0
     <Sigma> = 0
     <d_lam> = 0
