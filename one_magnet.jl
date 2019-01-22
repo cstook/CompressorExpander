@@ -130,9 +130,9 @@ function onemagnet(magnet::Magnet,
   femm.mi_probdef(0,"millimeters","axi",1e-10)
   femm.mi_getmaterial(airproperty[1])
   rk1 = piston(magnet,Δycap,propertycap)
-  rcoil = magnet.router+ygap
+  rcoil = magnet.router+rgap
   ycoil = 0.5*ygap
-  Δycoil = 2.0*magnet.halflength+Δycap-ycoil
+  Δycoil = 2.0*(magnet.halflength+0.5*Δycap-0.5*ygap)
   rk2 = coil(rcoil, ycoil, Δrcoil, Δycoil, currentcoil)
   rtube = rcoil + Δrcoil
   rk3 = tube(rtube, Δrtube, Δytube, propertytube)
@@ -173,7 +173,7 @@ function testonemagnetoptim()
     0.1*volumecap(x,magnet) +
     1.0*volumecoil(x, magnet, pressure_tube_outer_diameter) +
     0.1*volumetube(x) -
-    5000.0*force(x,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename)
+    100.0*force(x,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename)
 
   femm.openfemm(1)
   propertycap = ("416 Stainless Steel", 1, 0, "<None>", 0, 1, 1)
@@ -207,8 +207,10 @@ function testonemagnetoptim()
     x->cost(x,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename),
     lower,upper,x0,Fminbox(inner_optimizer),options
     )
+  x = Optim.minimizer(result)
+  r = (x, force(x,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename))
   femm.closefemm()
-  result
+  return r
 end
 
 function viewresult(x,
@@ -230,14 +232,12 @@ function testonemagnet()
   NSN0548 = Magnet(0.5*2.54, 0.5*6.45, 0.5*6.35, propertymagnet)
   onemagnet(NSN0548,5,propertycap,2,2,5,10,5,40,propertytube)
   femm.mi_saveas("onemagnet.FEM")
-  setcurrent(10)
-  f10 = measuregroup1force()
   setcurrent(5)
   f5 = measuregroup1force()
   setcurrent(0)
   f0 = measuregroup1force()
-  femm.closefemm()
+  setcurrent(10)
+  f10 = measuregroup1force()
+  # femm.closefemm()
   (f10,f5,f0)
 end
-
-# testonemagnet()
