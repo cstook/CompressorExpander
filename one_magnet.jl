@@ -156,24 +156,34 @@ end
 
 
 
-function testonemagnetoptim()
-  function force(x,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename)
+function testonemagnetoptim(;keepfemmopen::Bool=false)
+  function force(x,magnet,pressure_tube_outer_radius,propertycap,propertytube,filename)
     onemagnet(magnet, x[1], propertycap,
-              pressure_tube_outer_diameter-magnet.router, x[3], x[2], 10,
+              pressure_tube_outer_radius-magnet.router, x[3], x[2], 10,
               x[4], x[5], propertytube)
     femm.mi_saveas("onemagnet.FEM")
     f = measuregroup1force()
     femm.mi_close()
     f
   end
-  volumecap(x,magnet) = x[1]*(magnet.router^2-magnet.rhole^2) # ignore factor of π
-  volumecoil(x,magnet,pressure_tube_outer_diameter) = (2*magnet.halflength+x[1]-x[3])*(x[2]^2 - pressure_tube_outer_diameter^2) # ignore factor of π
-  volumetube(x) = x[5]*((x[2]+x[4])^2 - x[2]^2) # ignore factor of π
-  cost(x,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename) =
+  volumecap(x,magnet) = π*x[1]*(magnet.router^2-magnet.rhole^2)
+  function volumecoil(x,magnet,pressure_tube_outer_radius)
+    rin = pressure_tube_outer_radius
+    rout = rin + x[2]
+    Δy = 2.0*(magnet.halflength+0.5*x[1]-0.5*x[3])
+    volume_per_coil = π*Δy*(rout^2 - rin^2)
+    both_coils = 2.0*volume_per_coil
+  end
+  function volumetube(x,pressure_tube_outer_radius)
+    rin = pressure_tube_outer_radius+x[2]
+    rout = rin + x[4]
+    π*x[5]*(rout^2 - rin^2)
+  end
+  cost(x,magnet,pressure_tube_outer_radius,propertycap,propertytube,filename) =
     0.1*volumecap(x,magnet) +
-    1.0*volumecoil(x, magnet, pressure_tube_outer_diameter) +
-    0.1*volumetube(x) -
-    100.0*force(x,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename)
+    1.0*volumecoil(x, magnet, pressure_tube_outer_radius) +
+    0.1*volumetube(x, pressure_tube_outer_radius) +
+    -5000.0*force(x,magnet,pressure_tube_outer_radius,propertycap,propertytube,filename)
 
   femm.openfemm(1)
   propertycap = ("416 Stainless Steel", 1, 0, "<None>", 0, 1, 1)
@@ -181,7 +191,7 @@ function testonemagnetoptim()
   propertytube = ("416 Stainless Steel", 1, 0, "<None>", 0, 3, 1)
   NSN0548 = Magnet(0.5*2.54, 0.5*6.45, 0.5*6.35, propertymagnet)
   magnet = NSN0548
-  pressure_tube_outer_diameter = (3/8)*25.4
+  pressure_tube_outer_radius = 0.5*(3/8)*25.4
   #=
   x[1] = cap_length
   x[2] = Δrcoil
@@ -190,38 +200,58 @@ function testonemagnetoptim()
   x[5] = magnetics_length
   =#
 
-  #
-  # x = [6.278917000333998,13.806208919890006,2.3251921592932017,10.8690263304688,43.28815743888883]
+  # x = [5.96367, 4.87066, 1.82978, 0.520373, 57.0447]; f = 1.92  # Fminbox, NelderMead
+  # x = [6.34989, 4.89634, 1.71620, 0.42899, 61.97704] # SAMIN -5001.98381
+  # x = [6.35, 4.8625, 1.55555, 0.442986, 44.3412] # ParticleSwarm n_particles = 10 -4.873306e+03 f=1.98 50 iterations
+  # x= [5.92222, 5.35275, 1.75723, 0.435882, 44.1791] # SAMIN -4738.04453 f=2.03 500 iterations
+
   filename = tempname()
-  lower = [0.1, pressure_tube_outer_diameter+0.1,0.1,0.1,2*magnet.halflength]
-  upper = [2*magnet.halflength, pressure_tube_outer_diameter+20,2*magnet.halflength,20.0,100.0]
+  lower = [0.1, pressure_tube_outer_radius+0.1,0.1,0.1,2*magnet.halflength]
+  upper = [2*magnet.halflength, pressure_tube_outer_radius+20,2*magnet.halflength,20.0,100.0]
   x0 = ((x,y)->(x+y)/2).(lower,upper)
   volumecap(x0,magnet)
-  volumecoil(x0,magnet,pressure_tube_outer_diameter)
-  volumetube(x0)
-  force(x0,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename)
-
+  volumecoil(x0,magnet,pressure_tube_outer_radius)
+  volumetube(x0, pressure_tube_outer_radius)
+  force(x0,magnet,pressure_tube_outer_radius,propertycap,propertytube,filename)
+  #=
   inner_optimizer = NelderMead()
-  options = Optim.Options(x_tol=0.01, f_tol=0.001, outer_iterations = 4, iterations=4, store_trace=true,show_trace=true,show_every=1,time_limit=500,f_calls_limit=100)
+  options = Optim.Options(outer_iterations = 10, iterations=100, store_trace=true,show_trace=true,show_every=1,time_limit=5000,f_calls_limit=1000)
+  optimizer = Fminbox(inner_optimizer)
+  =#
+
+  options = Optim.Options(iterations=500)
+  optimizer = SAMIN(;
+        nt = 5,     # reduce temperature every nt*ns*dim(x_init) evaluations
+        ns = 5,     # adjust bounds every ns*dim(x_init) evaluations
+        rt = 0.9,     # geometric temperature reduction factor: when temp changes, new temp is t=rt*t
+        neps = 5,   # number of previous best values the final result is compared to
+        f_tol = 1e-4, # the required tolerance level for function value comparisons
+        x_tol = 1e-2, # the required tolerance level for x
+        coverage_ok = false, # if false, increase temperature until initial parameter space is covered
+        verbosity = 3) # scalar: 0, 1, 2 or 3 (default = 0
+
+#=
+  options = Optim.Options(f_tol = 10,x_tol = 1e-1,store_trace=true,show_trace=true,show_every=1,iterations=50)
+  optimizer = Optim.ParticleSwarm(;
+    lower = lower,
+    upper = upper,
+    n_particles = 10)
+
+=#
   result = optimize(
-    x->cost(x,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename),
-    lower,upper,x0,Fminbox(inner_optimizer),options
+    x->cost(x,magnet,pressure_tube_outer_radius,propertycap,propertytube,filename),
+    lower,upper,x0,optimizer,options
     )
   x = Optim.minimizer(result)
-  r = (x, force(x,magnet,pressure_tube_outer_diameter,propertycap,propertytube,filename))
-  femm.closefemm()
+  r = (x, force(x,magnet,pressure_tube_outer_radius,propertycap,propertytube,filename))
+  if keepfemmopen
+    onemagnet(magnet, x[1], propertycap,
+              pressure_tube_outer_radius-magnet.router, x[3], x[2], 10,
+              x[4], x[5], propertytube)
+  else
+    femm.closefemm()
+  end
   return r
-end
-
-function viewresult(x,
-                    magnet= Magnet(0.5*2.54, 0.5*6.45, 0.5*6.35, ("NdFeB 40 MGOe", 1, 0, "<None>", 90, 1, 1)),
-                    pressure_tube_outer_diameter= (3/8)*25.4,
-                    propertycap= ("416 Stainless Steel", 1, 0, "<None>", 0, 1, 1),
-                    propertytube= ("416 Stainless Steel", 1, 0, "<None>", 0, 3, 1))
-  femm.openfemm(1)
-  onemagnet(magnet, x[1], propertycap,
-            pressure_tube_outer_diameter-magnet.router, x[3], x[2], 10,
-            x[4], x[5], propertytube)
 end
 
 function testonemagnet()
