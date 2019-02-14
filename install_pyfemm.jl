@@ -1,3 +1,5 @@
+# https://discourse.julialang.org/t/pycall-pre-installing-a-python-package-required-by-a-julia-package/3316/11
+
 using PyCall
 
 const PACKAGES = ["pyfemm"]
