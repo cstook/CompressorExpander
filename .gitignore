@@ -9,4 +9,4 @@ two_magnet.FEM
 *.pbc
 *.node
 *.ele
-*-checkpoint.ipynb
+*-checkpoint.*
